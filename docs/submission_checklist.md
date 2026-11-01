@@ -2,8 +2,8 @@
 
 ## GitHub
 
-- [ ] https://github.com/k-tadamasa/PAI2026-Advanced1 がpublic
-- [ ] `main` branchが最終commitを指している
+- [x] https://github.com/k-tadamasa/PAI2026-Advanced1 がpublic
+- [x] `main` branchが最終commitを指している
 - [x] testが全件成功 (9 passed)
 - [x] model，checkpoint，runtime data，PDF原稿，private Git履歴を含まない
 - [x] 絶対path，内部IP，credential，氏名・所属・emailを含まない
