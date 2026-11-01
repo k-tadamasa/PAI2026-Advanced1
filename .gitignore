@@ -18,7 +18,9 @@ references/
 
 # Runtime data and generated artifacts
 runtime/
+output/
 outputs/
+tmp/
 logs/
 recordings/
 *.log

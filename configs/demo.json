@@ -1,0 +1,25 @@
+{
+  "schema_version": "pai2026_demo_config_v1",
+  "account_name": "TADAMASA_NDA",
+  "account_id": "46962",
+  "target": {
+    "human3d_part_ids": [2, 7, 14, 15],
+    "front_only": true
+  },
+  "iftomm": {
+    "standoff_m": 0.055,
+    "ellipsoid_radii_m": [0.11, 0.111, 0.0906],
+    "coverage_weight": 1.0,
+    "distance_weight": 0.5,
+    "lateral_weight": 0.8,
+    "reference_distance_m": 0.4,
+    "target_coverage_ratio": 0.99,
+    "sample_spacing_m": 0.01
+  },
+  "collision": {
+    "affects_planning": false,
+    "safe_color": "#22c55e",
+    "collision_color": "#ef4444",
+    "classification": "future_work"
+  }
+}

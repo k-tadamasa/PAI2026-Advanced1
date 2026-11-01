@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pai-body-screening-demo"
+version = "0.1.0"
+description = "Public educational IFToMM body-screening trajectory demo for PAI2026 Advanced1"
+requires-python = ">=3.10"
+dependencies = [
+  "matplotlib>=3.6,<4",
+  "numpy>=1.24,<3",
+  "scipy>=1.10,<2",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7,<9"]
+report = [
+  "pdfplumber>=0.11,<1",
+  "pypdf>=6,<7",
+  "reportlab>=4,<5",
+]
+video = ["imageio-ffmpeg>=0.5,<1"]
+
+[project.scripts]
+pai-body-screening = "pai_body_screening.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
