@@ -1,0 +1,51 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+
+# Restricted or large third-party assets
+models/
+checkpoints/
+weights/
+references/
+*.ckpt
+*.onnx
+*.pt
+*.pth
+*.pkl
+
+# Runtime data and generated artifacts
+runtime/
+outputs/
+logs/
+recordings/
+*.log
+*.mp4
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Node
+node_modules/
+dist/
+coverage/
+
+# Editors and operating systems
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Isaac Sim and Omniverse local state
+.nvidia-omniverse/
+ov-cache/
+isaacsim/
+isaacsim_assets/
