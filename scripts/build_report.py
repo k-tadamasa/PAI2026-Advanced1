@@ -314,17 +314,24 @@ def main() -> int:
     story.append(PageBreak())
     story.append(p("5. 工夫した点", styles["heading"]))
     improvements = [
-        "AI推論結果をROI選択と軌道生成へ直接接続し，単なるAI可視化にしなかった．",
-        "検査対象を正面の胴体・骨盤・左右大腿へ限定し，法線75°，中央幅80%，上端100 mm除外を明示的な境界として，全身へ自動fallbackしない設計とした．",
-        "実機形状のFFW-SG2上半身，Ridgeback台車，MD実体，探知楕円体を同じWebGL sceneへ統合した．",
-        "各trajectory frameで新たに検査されたfaceを保存し，人体表面が時間経過に合わせて緑へ変化するようにした．",
-        "衝突回避を軌道へ追加せず，一度でもMD・右グリッパ実meshと交差した人体faceと右グリッパlinkを赤く保持して限界を隠さない構成とした．",
-        "TORM姿勢間を固定fpsではなく位置・姿勢・関節変位に応じて適応分割し，ロボットsimulation自体の制御姿勢を細かくした．",
-        "private研究版から履歴や未公開手法を持ち込まず，論文で公開済みの式だけを独立実装した．",
-        "第三者model，checkpoint，SMPL-X dataを再配布せず，外部入力adapterとして分離した．",
+        (
+            "1. 問題設定",
+            "警備員が危険物を所持する可能性のある対象者へ接近するリスクを減らすため，"
+            "人体形状をAIで推定し，その表面に沿う検査軌道を生成してロボットで実行する課題を設定した．"
+            "形状推定・軌道生成・ロボットシミュレーションを一連のタスクとして結び付け，"
+            "AIの推論結果を実際のロボット動作へ利用する点を工夫した．",
+        ),
+        (
+            "2. 検査済み領域の人体形状モデルへの記録",
+            "各軌道姿勢で探知楕円体に含まれた人体メッシュのface IDを検査済みとして記録し，"
+            "それまでの履歴を人体形状モデル上へ保持した．この記録から検査対象ROIだけを分母とする"
+            "網羅率を算出するとともに，動画では検査済みfaceを緑へ変化させた．"
+            "これにより，ロボットがどこを検査したか，どこが未検査かを時間経過とともに確認できる．",
+        ),
     ]
-    for index, item in enumerate(improvements, 1):
-        story.append(p(f"{index}. {item}", styles["body"]))
+    for title, detail in improvements:
+        story.append(p(f"<b>{title}</b><br/>{detail}", styles["body"]))
+        story.append(Spacer(1, 2 * mm))
 
     story.append(p("6. 制約と今後の課題", styles["heading"]))
     story.append(
