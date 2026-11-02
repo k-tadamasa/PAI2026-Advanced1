@@ -62,6 +62,7 @@ def main() -> int:
         raise ValueError("trajectory contains no selected poses")
 
     all_poses = trajectory_payload["trajectory"]
+    metrics = trajectory_payload["metrics"]
     trajectory = np.asarray([pose["position_m"] for pose in all_poses], dtype=float)
     collisions = np.asarray([pose["collision"] for pose in all_poses], dtype=bool)
     vertices = np.asarray(ai_payload["mesh"]["vertices"], dtype=float)
@@ -124,7 +125,7 @@ def main() -> int:
     figure.text(
         0.39,
         0.91,
-        "AI body-surface inference + public IFToMM trajectory",
+        "AI body-surface inference + Kitahara four-lane raster + TORM IK",
         color="#cbd5e1",
         fontsize=10,
         ha="center",
@@ -133,7 +134,7 @@ def main() -> int:
     figure.text(
         0.80,
         0.95,
-        "Pipeline\n3D point cloud\n  ↓\nHuman3D\n  ↓\nSegFit / SMPL-X\n  ↓\nFront ROI\n  ↓\nIFToMM trajectory",
+        "Pipeline\n3D point cloud\n  ↓\nHuman3D\n  ↓\nSegFit / SMPL-X\n  ↓\nFront ROI\n  ↓\n6-lane surface raster",
         color="#cbd5e1",
         fontsize=9.5,
         va="top",
@@ -142,7 +143,10 @@ def main() -> int:
     figure.text(
         0.80,
         0.25,
-        "Result\ncoverage  99.03%\npath      6.41 m\nposes     628\n\nCollision avoidance:\nfuture work",
+        f"Result\ncoverage  {100 * metrics['coverage_ratio']:.2f}%\n"
+        f"path      {metrics['path_length_m']:.2f} m\n"
+        f"poses     {metrics['trajectory_pose_count']}\n\n"
+        "Collision avoidance:\nfuture work",
         color="#cbd5e1",
         fontsize=9.5,
         va="top",
@@ -150,8 +154,8 @@ def main() -> int:
     )
     axis.legend(
         handles=[
-            Line2D([0], [0], color="#22c55e", lw=3, label="safe proxy"),
-            Line2D([0], [0], color="#ef4444", lw=3, label="collision proxy"),
+            Line2D([0], [0], color="#22c55e", lw=3, label="clear"),
+            Line2D([0], [0], color="#ef4444", lw=3, label="mesh collision"),
             Line2D([0], [0], color="#60a5fa", lw=5, label="robot arm"),
         ],
         loc="lower left",
@@ -173,8 +177,8 @@ def main() -> int:
         collision_text = "YES (red)" if pose["collision"] else "NO (green)"
         status.set_text(
             f"Scan {frame_index + 1:03d}/{len(poses):03d}\n"
-            f"trajectory pose {original_index + 1}/628\n\n"
-            f"collision proxy\n{collision_text}\n\n"
+            f"trajectory pose {original_index + 1}/{len(all_poses)}\n\n"
+            f"mesh collision\n{collision_text}\n\n"
             "Front ROI\ntorso / pelvis / thighs"
         )
         status.set_color("#fca5a5" if pose["collision"] else "#bbf7d0")

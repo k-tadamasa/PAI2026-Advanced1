@@ -4,8 +4,11 @@
 
 - [x] https://github.com/k-tadamasa/PAI2026-Advanced1 がpublic
 - [x] `main` branchが最終commitを指している
-- [x] testが全件成功 (9 passed)
-- [x] model，checkpoint，runtime data，PDF原稿，private Git履歴を含まない
+- [x] Python testが全件成功 (18 passed)
+- [x] Web typecheck・production buildが成功
+- [x] GitHub Pages workflowを収録
+- [x] checkpoint，実測AI mesh，runtime data，PDF原稿，private Git履歴を含まない
+- [x] FFW-SG2 / Ridgeback資産の原ライセンスを収録
 - [x] 絶対path，内部IP，credential，氏名・所属・emailを含まない
 
 ## PDF
@@ -17,10 +20,11 @@
 
 ## YouTube
 
-- [x] upload用MP4が1-3分 (62.8秒)
+- [x] upload用MP4が1-3分 (約113秒)
+- [x] 1920x1080 / H.264 / yuv420p
 - [ ] titleが `PAI最終課題_TADAMASA_NDA`
 - [ ] 限定公開以上
-- [ ] 2倍速の場合は動画内または概要欄に明記
+- [x] ロボット実行clip内に `2× VIDEO · 2× SCAN` と明記
 - [ ] 子ども向け `いいえ`
 - [ ] 年齢制限 `いいえ`
 - [ ] インスタントプレミア公開なし

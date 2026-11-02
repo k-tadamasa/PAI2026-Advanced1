@@ -72,7 +72,7 @@ def save_preview(
     axis.set_zlabel("z [m]")
     fig.suptitle(
         f"Front torso/pelvis/thigh scan | coverage {100 * result.coverage_ratio:.2f}%\n"
-        "green: safe proxy, red: collision proxy (future work)",
+        "green: clear, red: MD / right-gripper mesh collision (future work)",
         fontsize=14,
     )
     axis.view_init(elev=8, azim=180)

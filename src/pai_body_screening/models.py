@@ -15,7 +15,8 @@ class MeshData:
     """Triangular human mesh and Human3D face-part labels.
 
     ``face_part_ids`` must contain one Human3D part ID per triangle.  The
-    camera position is used only to select the front-facing surface.
+    camera position is retained for outward-normal disambiguation after the
+    fixed -X front-ROI selection.
     """
 
     vertices: FloatArray
@@ -73,19 +74,37 @@ def face_geometry(mesh: MeshData) -> tuple[FloatArray, FloatArray, FloatArray]:
     return centroids, normals, doubled_area * 0.5
 
 
-def surface_frame(normal: ArrayLike) -> FloatArray:
-    """Return a right-handed detector frame with local x along the normal."""
+def surface_frame(
+    normal: ArrayLike,
+    scan_direction: ArrayLike | None = None,
+) -> FloatArray:
+    """Return the IFToMM detector frame for one outward surface normal.
 
-    local_x = np.asarray(normal, dtype=np.float64)
-    norm = float(np.linalg.norm(local_x))
+    Local +X points toward the human, local +Y follows the detector long
+    axis, and local +Z follows the upward scan direction.  The physical
+    handle lies on local -Y.
+    """
+
+    outward = np.asarray(normal, dtype=np.float64)
+    norm = float(np.linalg.norm(outward))
     if norm <= 1e-12:
         raise ValueError("surface normal must be non-zero")
-    local_x = local_x / norm
-    up = np.asarray([0.0, 0.0, 1.0])
-    local_y = np.cross(up, local_x)
-    if np.linalg.norm(local_y) <= 1e-8:
-        local_y = np.cross(np.asarray([0.0, 1.0, 0.0]), local_x)
-    local_y = local_y / np.linalg.norm(local_y)
-    local_z = np.cross(local_x, local_y)
-    local_z = local_z / np.linalg.norm(local_z)
-    return np.column_stack((local_x, local_y, local_z))
+    inspection = -outward / norm
+    scan_hint = np.asarray(
+        [0.0, 0.0, 1.0] if scan_direction is None else scan_direction,
+        dtype=np.float64,
+    )
+    if scan_hint.shape != (3,) or not np.all(np.isfinite(scan_hint)):
+        raise ValueError("scan_direction must contain three finite values")
+    if np.linalg.norm(scan_hint) <= 1e-12:
+        scan_hint = np.asarray([0.0, 0.0, 1.0])
+    scan = scan_hint - inspection * float(scan_hint @ inspection)
+    if np.linalg.norm(scan) <= 1e-8:
+        scan_hint = np.asarray([0.0, 1.0, 0.0])
+        scan = scan_hint - inspection * float(scan_hint @ inspection)
+    scan /= np.linalg.norm(scan)
+    detector_long = np.cross(scan, inspection)
+    detector_long /= np.linalg.norm(detector_long)
+    scan = np.cross(inspection, detector_long)
+    scan /= np.linalg.norm(scan)
+    return np.column_stack((inspection, detector_long, scan))

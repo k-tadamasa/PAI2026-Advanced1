@@ -4,22 +4,37 @@
   "account_id": "46962",
   "target": {
     "human3d_part_ids": [2, 7, 14, 15],
-    "front_only": true
+    "front_only": true,
+    "front_normal_max_angle_deg": 75.0,
+    "front_width_fraction": 0.8,
+    "front_top_margin_m": 0.1
   },
   "iftomm": {
     "standoff_m": 0.055,
     "ellipsoid_radii_m": [0.11, 0.111, 0.0906],
-    "coverage_weight": 1.0,
-    "distance_weight": 0.5,
-    "lateral_weight": 0.8,
-    "reference_distance_m": 0.4,
-    "target_coverage_ratio": 0.99,
-    "sample_spacing_m": 0.01
+    "lane_count": 4,
+    "lane_spacing_scale": 1.5,
+    "central_lane_gap_scale": 1.2,
+    "flip_md_at_center": true,
+    "lane_half_width_m": 0.002,
+    "local_fit_half_window": 5,
+    "interpolation_gap_m": 0.002,
+    "loess_window_points": 50,
+    "target_coverage_ratio": 0.95,
+    "sample_spacing_m": 0.01,
+    "maximum_orientation_step_deg": 1.5
   },
   "collision": {
     "affects_planning": false,
-    "safe_color": "#22c55e",
+    "trajectory_color": "#38bdf8",
     "collision_color": "#ef4444",
     "classification": "future_work"
+  },
+  "visualization": {
+    "robot": "ffw_sg2_mecanum",
+    "base_motion": "ideal_holonomic_mecanum",
+    "inspected_surface_color": "#22c55e",
+    "detector_color": "#f59e0b",
+    "detection_volume_color": "#22d3ee"
   }
 }

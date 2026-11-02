@@ -89,24 +89,39 @@ def save_trajectory_json(
                 "collision": bool(collision),
                 "display_color": "#ef4444" if collision else "#22c55e",
                 "colliding_face_ids": collisions.colliding_face_ids[index],
+                "collision_components": (
+                    collisions.colliding_components[index]
+                    if collisions.colliding_components
+                    else []
+                ),
             }
         )
     payload = {
-        "schema_version": "pai2026_iftomm_public_v1",
-        "method": "Kitahara_IFToMM_coverage_aware_publication_baseline",
+        "schema_version": "pai2026_kitahara_surface_raster_v2",
+        "method": "Kitahara_body_surface_raster_1p5_lane_spacing",
         "scope": {
             "front_only": config.front_only,
             "human3d_part_ids": sorted(config.part_ids),
             "collision_affects_planning": False,
+            "collision_model": collisions.collision_model,
         },
         "parameters": {
             "standoff_m": config.standoff_m,
             "ellipsoid_radii_m": list(config.ellipsoid_radii_m),
-            "coverage_weight": config.coverage_weight,
-            "distance_weight": config.distance_weight,
-            "lateral_weight": config.lateral_weight,
-            "reference_distance_m": config.reference_distance_m,
+            "lane_count": config.lane_count,
+            "lane_spacing_scale": config.lane_spacing_scale,
+            "central_lane_gap_scale": config.central_lane_gap_scale,
+            "flip_md_at_center": config.flip_md_at_center,
+            "lane_half_width_m": config.lane_half_width_m,
+            "local_fit_half_window": config.local_fit_half_window,
+            "interpolation_gap_m": config.interpolation_gap_m,
+            "loess_window_points": config.loess_window_points,
+            "lane_reference_y_m": result.lane_reference_y_m.tolist(),
             "target_coverage_ratio": config.target_coverage_ratio,
+            "front_normal_max_angle_deg": config.front_normal_max_angle_deg,
+            "front_width_fraction": config.front_width_fraction,
+            "front_top_margin_m": config.front_top_margin_m,
+            "maximum_orientation_step_deg": config.maximum_orientation_step_deg,
         },
         "metrics": {
             "coverage_ratio": result.coverage_ratio,

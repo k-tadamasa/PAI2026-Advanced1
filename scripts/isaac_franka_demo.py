@@ -186,7 +186,7 @@ def main() -> int:
             {
                 "trajectory_index": int(pose["index"]),
                 "ik_success": bool(success),
-                "collision_proxy": bool(pose["collision"]),
+                "mesh_collision": bool(pose["collision"]),
             }
         )
         if local_index % 50 == 0 or local_index + 1 == len(poses):

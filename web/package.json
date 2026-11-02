@@ -1,0 +1,36 @@
+{
+  "name": "pai-body-screening-viewer",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "capture:video": "node scripts/capture-video.mjs",
+    "check:frame": "node scripts/check-frame.mjs",
+    "record:video": "node scripts/record-realtime.mjs",
+    "record:section": "node scripts/record-section.mjs",
+    "record:presentation": "node scripts/record-presentation.mjs",
+    "preview": "vite preview",
+    "typecheck": "tsc -b --pretty false"
+  },
+  "dependencies": {
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.4.0",
+    "lucide-react": "^0.468.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "three": "^0.181.0",
+    "urdf-loader": "^0.12.6"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@types/three": "^0.181.0",
+    "@vitejs/plugin-react": "^5.0.4",
+    "playwright-core": "^1.55.0",
+    "typescript": "^5.7.2",
+    "vite": "^7.1.9"
+  }
+}

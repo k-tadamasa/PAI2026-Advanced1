@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from pai_body_screening.collision import DetectorGripperMeshModel
 from pai_body_screening.models import MeshData
 
 
@@ -26,4 +27,11 @@ def demo_mesh() -> MeshData:
         payload["mesh"]["faces"],
         payload["mesh"]["face_part_ids"],
         payload["camera_position_m"],
+    )
+
+
+@pytest.fixture(scope="session")
+def collision_model() -> DetectorGripperMeshModel:
+    return DetectorGripperMeshModel.from_asset_root(
+        Path(__file__).parents[1] / "web/public/assets"
     )

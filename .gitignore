@@ -39,6 +39,10 @@ venv/
 node_modules/
 dist/
 coverage/
+*.tsbuildinfo
+web/vite.config.js
+web/vite.config.d.ts
+web/public/data/private-*.json
 
 # Editors and operating systems
 .vscode/

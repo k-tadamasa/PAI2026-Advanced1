@@ -100,7 +100,7 @@ def main() -> int:
             {
                 "index": int(pose["index"]),
                 "ik_success": bool(success),
-                "collision_proxy": bool(pose["collision"]),
+                "mesh_collision": bool(pose["collision"]),
             }
         )
 

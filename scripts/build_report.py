@@ -14,7 +14,6 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.cidfonts import UnicodeCIDFont
 from reportlab.platypus import (
     Image,
-    KeepTogether,
     PageBreak,
     Paragraph,
     SimpleDocTemplate,
@@ -26,14 +25,22 @@ from reportlab.platypus import (
 
 ACCOUNT = "TADAMASA_NDA"
 ACCOUNT_ID = "46962"
-TITLE = "AI推論とIFToMM軌道によるロボットボディスクリーニング"
+TITLE = "AI推論と体表面追従軌道によるロボットボディスクリーニング"
 
 
 def parser() -> argparse.ArgumentParser:
     result = argparse.ArgumentParser()
     result.add_argument("--trajectory", default="outputs/trajectory.json")
     result.add_argument("--ai-input", default="outputs/ai-planner-input.json")
+    result.add_argument("--scene", default="web/public/data/private-ai-scene.json")
+    result.add_argument(
+        "--presentation", default="web/public/data/private-presentation.json"
+    )
     result.add_argument("--preview", default="outputs/trajectory-preview.png")
+    result.add_argument(
+        "--web-preview",
+        default="output/web/private-ai-preview.png",
+    )
     result.add_argument(
         "--output",
         default=f"output/pdf/説明資料_PAI最終課題_{ACCOUNT}.pdf",
@@ -65,8 +72,40 @@ def main() -> int:
     sans, serif = register_fonts()
     trajectory = json.loads(Path(args.trajectory).read_text(encoding="utf-8"))
     ai_input = json.loads(Path(args.ai_input).read_text(encoding="utf-8"))
-    metrics = trajectory["metrics"]
+    scene_path = Path(args.scene)
+    scene = (
+        json.loads(scene_path.read_text(encoding="utf-8"))
+        if scene_path.is_file()
+        else trajectory
+    )
+    metrics = scene["metrics"]
     ai = ai_input["ai_inference"]
+    presentation_path = Path(args.presentation)
+    presentation = (
+        json.loads(presentation_path.read_text(encoding="utf-8"))
+        if presentation_path.is_file()
+        else None
+    )
+    if presentation is not None:
+        ai = {
+            "human3d_point_count": presentation["human3d"]["point_count"],
+            "fitted_vertex_count": len(presentation["smplx"]["vertices"]),
+            "fitted_face_count": len(presentation["smplx"]["faces"]),
+        }
+    source_pose_count = int(
+        metrics.get("source_trajectory_pose_count", metrics["trajectory_pose_count"])
+    )
+    inspection_time_s = float(
+        metrics.get(
+            "inspection_time_s",
+            scene.get("trajectory", [{}])[-1].get("robot", {}).get("time_s", 0.0),
+        )
+    )
+    pose_estimation_time_s = (
+        float(presentation["metrics"]["pose_estimation_time_s"])
+        if presentation is not None
+        else None
+    )
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
 
@@ -159,7 +198,7 @@ def main() -> int:
     story.append(p("1. 課題概要", styles["heading"]))
     story.append(
         p(
-            "警備員が検査対象者へ接近する危険を減らすため，AIで推定した人体表面をロボットが非接触で走査するシミュレーションを構築した．3D点群へHuman3DとSegFitを適用し，胴体・骨盤・左右大腿の正面だけを抽出する．抽出面に対して公開済みIFToMM手法でcoverage-aware trajectoryを生成し，Isaac Sim上のロボットへ入力できる形式へ変換する．",
+            "警備員が検査対象者へ接近する危険を減らすため，AIで推定した人体表面をロボットが非接触で走査する可視化システムを構築した．3D点群へHuman3DとSegFitを適用し，胴体・骨盤・左右大腿のうち面法線のXY投影と-X軸の角度が75°未満となる正面を抽出する．さらに左右を抽出幅の中央80%，上端を最高面重心から100 mm下へ限定する．抽出面に対して走査線間隔を1.5倍にした体表面追従4列往復軌道を生成し，TORMでFFW-SG2とMecanum台車の11自由度軌道を平滑化してWeb上で再生する．",
             styles["body"],
         )
     )
@@ -172,7 +211,7 @@ def main() -> int:
     )
 
     pipeline = Table(
-        [["3D point cloud", "→", "Human3D", "→", "SegFit", "→", "IFToMM", "→", "Isaac Sim"]],
+        [["3D point cloud", "→", "Human3D", "→", "SegFit", "→", "4-lane raster", "→", "Web Viewer"]],
         colWidths=[31 * mm, 7 * mm, 24 * mm, 7 * mm, 22 * mm, 7 * mm, 23 * mm, 7 * mm, 27 * mm],
     )
     pipeline.setStyle(
@@ -203,9 +242,15 @@ def main() -> int:
         ["正面ROI面積", f"{metrics['target_area_m2']:.4f} m2"],
         ["被覆率", f"{100 * metrics['coverage_ratio']:.2f}%"],
         ["経路長", f"{metrics['path_length_m']:.2f} m"],
-        ["制御点 / 補間姿勢", f"{metrics['control_point_count']} / {metrics['trajectory_pose_count']}"],
+        ["検査時間", f"{inspection_time_s:.1f} s（走査速度2倍）"],
+        ["TORM姿勢 / 適応細分化後", f"{source_pose_count} / {metrics['trajectory_pose_count']}"],
         ["軌道生成時間", f"{metrics['planning_time_s']:.2f} s"],
-        ["衝突proxy姿勢", f"{metrics['collision_pose_count']} / {metrics['trajectory_pose_count']}"],
+        *(
+            [["姿勢推定時間", f"{pose_estimation_time_s:.3f} s"]]
+            if pose_estimation_time_s is not None
+            else []
+        ),
+        ["実形状衝突姿勢", f"{metrics['collision_pose_count']} / {source_pose_count}"],
     ]
     metric_table = Table(metric_rows, colWidths=[68 * mm, 83 * mm])
     metric_table.setStyle(
@@ -226,34 +271,42 @@ def main() -> int:
     story.append(metric_table)
 
     story.append(PageBreak())
-    story.append(p("4. IFToMM軌道生成", styles["heading"]))
+    story.append(p("4. 体表面追従4列往復軌道とTORM IK", styles["heading"]))
     story.append(
         p(
-            "対象faceの面重心と法線を計算し，法線方向へ55 mm離した点を制御点候補とした．探知可能領域は半径110 / 111 / 90.6 mmの楕円体で近似し，faceの3頂点がすべて楕円体内へ入ったとき検査済みと判定した．検査済み領域に隣接する未検査faceを局所候補とし，次式を最大化する候補を順次選択した．",
+            "選択ROIの横幅へ4本のy_ref列を置き，最外線を従来位置へ維持したまま内側2本を外へ移動し，中央間隔を従来比1.2倍とした．各定Y断面と人体meshの交点を参照点とし，各点の上下5点ずつをXZ平面で局所直線近似して法線方向へ55 mmオフセットした．列内を上下交互に走査し，2 mmを超える間隔と列間を線形補間した．",
             styles["body"],
         )
     )
     story.append(
         p(
-            "J = 1.0 × (新規被覆面積 / 対象面積) - 0.5 × (移動距離 / 0.4) - 0.8 × (横移動 / 0.4)",
+            "p_mod = p_near + l_des (p_des - p_near) / ||p_des - p_near||,  l_des = 55 mm",
             styles["formula"],
         )
     )
     story.append(
         p(
-            "制御点列を弧長で再parameterizeし，位置をcubic spline，姿勢をquaternion SLERPで補間した．目標被覆率は99%とし，99.03%に到達して停止した．",
+            f"位置と姿勢を50点LOESSで平滑化し，TORMで得た{source_pose_count}姿勢の各区間を，MD位置2 mm，MD姿勢0.5°，各関節0.5°，リフト2 mm以下となるまで適応分割した．その結果，{metrics['trajectory_pose_count']}制御姿勢となり，検査対象ROIに対して被覆率{100 * metrics['coverage_ratio']:.2f}%を得た．",
             styles["body"],
         )
     )
-    preview_path = Path(args.preview)
+    story.append(
+        p(
+            "Web viewerはThree.jsによるkinematic simulationであり，FFW-SG2上半身とRidgeback Mecanum台車を表示して，台車を理想holonomic運動として軌道へ追従させた．SMPL-X基準面を薄い灰色，MD実体を灰色，探知可能楕円体を淡い透明青，累積検査済みfaceを緑で表示する．一度でも交差した人体faceと右グリッパlinkは以後も赤く保持し，MDと楕円体は変色させない．",
+            styles["body"],
+        )
+    )
+    preview_path = Path(args.web_preview)
+    if not preview_path.is_file():
+        preview_path = Path(args.preview)
     if preview_path.is_file():
         image = Image(str(preview_path))
-        image._restrictSize(150 * mm, 155 * mm)
+        image._restrictSize(174 * mm, 132 * mm)
         story.append(Spacer(1, 2 * mm))
         story.append(image)
         story.append(
             p(
-                "図1 正面の胴体・骨盤・左右大腿に対する生成軌道．緑はcollision proxy非検出，赤はcollision proxy検出姿勢，青点はIFToMM制御点を示す．",
+                "図1 1080p Web viewer．薄い灰色はSMPL-X基準面，緑は検査済み人体面，淡い透明青は探知楕円体，灰色はMD実体，赤は累積した人体face・右グリッパlinkの実mesh交差履歴を示す．",
                 styles["small"],
             )
         )
@@ -262,8 +315,11 @@ def main() -> int:
     story.append(p("5. 工夫した点", styles["heading"]))
     improvements = [
         "AI推論結果をROI選択と軌道生成へ直接接続し，単なるAI可視化にしなかった．",
-        "検査対象を正面の胴体・骨盤・左右大腿へ限定し，対象外faceが混入した場合に全身へ自動fallbackしない設計とした．",
-        "衝突回避を追加してIFToMM手法を変更せず，衝突proxy検出区間を赤く表示して限界を隠さない構成とした．",
+        "検査対象を正面の胴体・骨盤・左右大腿へ限定し，法線75°，中央幅80%，上端100 mm除外を明示的な境界として，全身へ自動fallbackしない設計とした．",
+        "実機形状のFFW-SG2上半身，Ridgeback台車，MD実体，探知楕円体を同じWebGL sceneへ統合した．",
+        "各trajectory frameで新たに検査されたfaceを保存し，人体表面が時間経過に合わせて緑へ変化するようにした．",
+        "衝突回避を軌道へ追加せず，一度でもMD・右グリッパ実meshと交差した人体faceと右グリッパlinkを赤く保持して限界を隠さない構成とした．",
+        "TORM姿勢間を固定fpsではなく位置・姿勢・関節変位に応じて適応分割し，ロボットsimulation自体の制御姿勢を細かくした．",
         "private研究版から履歴や未公開手法を持ち込まず，論文で公開済みの式だけを独立実装した．",
         "第三者model，checkpoint，SMPL-X dataを再配布せず，外部入力adapterとして分離した．",
     ]
@@ -273,47 +329,30 @@ def main() -> int:
     story.append(p("6. 制約と今後の課題", styles["heading"]))
     story.append(
         p(
-            "本実装は衝突情報を軌道の評価関数へ入れていない．628補間姿勢のうち214姿勢で保守的な直方体proxyと人体meshの重なりを検出したが，これは物理simulation上の接触率ではなく，可視化用の近似判定である．また，軌道生成時点ではrobotの可動域，自己干渉，環境衝突を考慮していない．今後は検出器shaftを含む正確な形状制約，IK到達可能性，自己干渉回避を導入し，正面・背面を連続して検査する必要がある．",
+            f"本実装は衝突情報を軌道生成へ入れていない．{source_pose_count} TORM姿勢のうち{metrics['collision_pose_count']}姿勢で，URDF FKにより配置したMD collision STL・右グリッパ5リンクSTLと人体meshの三角形交差を検出した．これはThree.js上のkinematicな形状交差可視化であり，接触力を計算する物理simulationではない．Mecanum台車はスリップ，速度・加速度，床接触を省略した理想運動である．今後は自己干渉，台車運動制約，環境衝突と衝突回避を導入する必要がある．",
             styles["body"],
         )
     )
     story.append(p("7. まとめ", styles["heading"]))
     story.append(
         p(
-            "Human3DとSegFitのAI推論結果を用い，限定した人体正面ROIへ公開済みIFToMM軌道生成を適用した．<br/>生成軌道の被覆率は99.03%であり，衝突可能区間を色で明示した．研究用private platformの未公開新規性を含まないpublic codeとして整理し，Isaac Simで再生可能な入力形式とした．",
+            f"Human3DとSegFitのAI推論結果を用い，限定した人体正面ROIへ走査線間隔1.5倍の体表面追従4列往復軌道を適用し，公開TORM手法で11自由度軌道を平滑化した．<br/>生成軌道の被覆率は{100 * metrics['coverage_ratio']:.2f}%であり，FFW-SG2 Mecanum，MD，探知領域，検査済み面，衝突可能区間をWeb上で確認できる．研究用private platformの未公開新規性を含まないpublic codeとして整理した．",
             styles["body"],
         )
     )
 
     story.append(p("参考文献", styles["heading"]))
     references = [
-        "[1] T. Kitahara, S. Abiko, and T. Tsujita, “Coverage-Aware Trajectory Generation for Manipulator-Based Body Screening,” IFToMM 2026.",
-        "[2] T. Kitahara et al., “Calculation of Target Attitude of Metal Detector Along the Body Surface for Automation of Body Check Using Manipulators,” 2024.",
-        "[3] Human3D, https://github.com/human-3d/Human3D",
-        "[4] SegFit, https://segfit.github.io/",
-        "[5] SMPL-X, https://smpl-x.is.tue.mpg.de/",
-        "[6] NVIDIA Isaac Sim, https://docs.isaacsim.omniverse.nvidia.com/",
+        "[1] “Calculation of Target Attitude of Metal Detector Along the Body Surface for Automation of Body Check Using Manipulators,” SI 2024.",
+        "[2] Human3D, https://github.com/human-3d/Human3D",
+        "[3] SegFit, https://segfit.github.io/",
+        "[4] SMPL-X, https://smpl-x.is.tue.mpg.de/",
+        "[5] ROBOTIS AI Worker, https://github.com/ROBOTIS-GIT/ai_worker",
+        "[6] Clearpath Ridgeback, https://github.com/ridgeback/ridgeback",
+        "[7] Three.js, https://threejs.org/",
     ]
     for reference in references:
         story.append(p(reference, styles["small"]))
-
-    story.append(Spacer(1, 6 * mm))
-    note = Table(
-        [[p("公開情報", styles["small"]), p("GitHub: https://github.com/k-tadamasa/PAI2026-Advanced1<br/>個人情報・第三者model・private研究履歴は含めていない．", styles["small"])]],
-        colWidths=[26 * mm, 125 * mm],
-    )
-    note.setStyle(
-        TableStyle(
-            [
-                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#f1f5f9")),
-                ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
-                ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                ("TOPPADDING", (0, 0), (-1, -1), 7),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
-            ]
-        )
-    )
-    story.append(KeepTogether(note))
 
     document.build(story, onFirstPage=footer, onLaterPages=footer)
     print(output)
